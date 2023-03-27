@@ -4,15 +4,15 @@ import torch
 import torchvision
 
 import matplotlib.pyplot as plt
-import segm.utils.torch as ptu
+import utils.torch as ptu
 import torch.nn.functional as F
 
 from pathlib import Path
 from PIL import Image
-from segm import config
-from segm.data.utils import STATS
-from segm.model.decoder import MaskTransformer
-from segm.model.factory import load_model
+from . import config
+from data.utils import STATS
+from model.decoder import MaskTransformer
+from model.factory import load_model
 from torchvision import transforms
 
 

@@ -10,16 +10,16 @@ import torch
 import torch.nn.functional as F
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from segm.utils import distributed
-from segm.utils.logger import MetricLogger
-import segm.utils.torch as ptu
+from utils import distributed
+from utils.logger import MetricLogger
+import utils.torch as ptu
 
-from segm.model.factory import load_model
-from segm.data.factory import create_dataset
-from segm.metrics import gather_data, compute_metrics
+from model.factory import load_model
+from data.factory import create_dataset
+from metrics import gather_data, compute_metrics
 
-from segm.model.utils import inference
-from segm.data.utils import seg_to_rgb, rgb_denormalize, IGNORE_LABEL
+from model.utils import inference
+from data.utils import seg_to_rgb, rgb_denormalize, IGNORE_LABEL
 from segm import config
 
 
@@ -237,7 +237,7 @@ def main(
         crop_size=im_size,
         patch_size=patch_size,
         batch_size=1,
-        num_workers=10,
+        num_workers=8,
         split="val",
         normalization=normalization,
         crop=False,

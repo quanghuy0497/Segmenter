@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from segm.data.base import BaseMMSeg
-from segm.data import utils
-from segm.config import dataset_dir
+from data.base import BaseMMSeg
+from data import utils
+from config import dataset_dir
 
 PASCAL_CONTEXT_CONFIG_PATH = Path(__file__).parent / "config" / "pascal_context.py"
 PASCAL_CONTEXT_CATS_PATH = Path(__file__).parent / "config" / "pascal_context.yml"

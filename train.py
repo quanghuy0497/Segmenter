@@ -3,29 +3,29 @@ from pathlib import Path
 import yaml
 import json
 import numpy as np
+import datetime
 import torch
 import click
 import argparse
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from segm.utils import distributed
-import segm.utils.torch as ptu
-from segm import config
+from utils import distributed
+import utils.torch as ptu
+import config
 
-from segm.model.factory import create_segmenter
-from segm.optim.factory import create_optimizer, create_scheduler
-from segm.data.factory import create_dataset
-from segm.model.utils import num_params
+from model.factory import create_segmenter
+from optim.factory import create_optimizer, create_scheduler
+from data.factory import create_dataset
+from model.utils import num_params
 
 from timm.utils import NativeScaler
 from contextlib import suppress
 
-from segm.utils.distributed import sync_model
-from segm.engine import train_one_epoch, evaluate
+from utils.distributed import sync_model
+from engine import train_one_epoch, evaluate
 
 
 @click.command(help="")
-@click.option("--log-dir", type=str, help="logging directory")
 @click.option("--dataset", type=str)
 @click.option("--im-size", default=None, type=int, help="dataset resize size")
 @click.option("--crop-size", default=None, type=int)
@@ -46,7 +46,6 @@ from segm.engine import train_one_epoch, evaluate
 @click.option("--amp/--no-amp", default=False, is_flag=True)
 @click.option("--resume/--no-resume", default=True, is_flag=True)
 def main(
-    log_dir,
     dataset,
     im_size,
     crop_size,
@@ -113,6 +112,7 @@ def main(
     if normalization:
         model_cfg["normalization"] = normalization
 
+    log_dir = 'logs/' + "{:%Y%m%d@%H%M%S}".format(datetime.datetime.now())
     # experiment config
     batch_size = world_batch_size // ptu.world_size
     variant = dict(
@@ -121,12 +121,13 @@ def main(
         resume=resume,
         dataset_kwargs=dict(
             dataset=dataset,
+            dataset_path = 'data/'+ dataset,
             image_size=im_size,
             crop_size=crop_size,
             batch_size=batch_size,
             normalization=model_cfg["normalization"],
             split="train",
-            num_workers=10,
+            num_workers=8,
         ),
         algorithm_kwargs=dict(
             batch_size=batch_size,

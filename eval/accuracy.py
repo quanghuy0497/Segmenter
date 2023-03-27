@@ -1,14 +1,14 @@
 import click
 import torch
 
-import segm.utils.torch as ptu
+import utils.torch as ptu
 
-from segm.utils.logger import MetricLogger
+from utils.logger import MetricLogger
 
-from segm.model.factory import create_vit
-from segm.data.factory import create_dataset
-from segm.data.utils import STATS
-from segm.metrics import accuracy
+from model.factory import create_vit
+from data.factory import create_dataset
+from data.utils import STATS
+from metrics import accuracy
 from segm import config
 
 

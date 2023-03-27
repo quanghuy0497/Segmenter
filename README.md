@@ -19,7 +19,7 @@ Install [PyTorch 1.9](https://pytorch.org/) then `pip install .` at the root of 
 
 To download ADE20K, use the following command:
 ```python
-python -m segm.scripts.prepare_ade20k $DATASET
+python -m scripts.prepare_ade20k $DATASET
 ```
 
 ## Model Zoo
@@ -172,22 +172,22 @@ Download one checkpoint with its configuration in a common folder, for example `
 
 You can generate segmentation maps from your own data with:
 ```python
-python -m segm.inference --model-path seg_tiny_mask/checkpoint.pth -i images/ -o segmaps/ 
+python -m inference --model-path seg_tiny_mask/checkpoint.pth -i images/ -o segmaps/ 
 ```
 
 To evaluate on ADE20K, run the command:
 ```python
 # single-scale evaluation:
-python -m segm.eval.miou seg_tiny_mask/checkpoint.pth ade20k --singlescale
+python -m eval.miou seg_tiny_mask/checkpoint.pth ade20k --singlescale
 # multi-scale evaluation:
-python -m segm.eval.miou seg_tiny_mask/checkpoint.pth ade20k --multiscale
+python -m eval.miou seg_tiny_mask/checkpoint.pth ade20k --multiscale
 ```
 
 ## Train
 
 Train `Seg-T-Mask/16` on ADE20K on a single GPU:
 ```python
-python -m segm.train --log-dir seg_tiny_mask --dataset ade20k \
+python -m train --log-dir seg_tiny_mask --dataset ade20k \
   --backbone vit_tiny_patch16_384 --decoder mask_transformer
 ```
 
@@ -197,7 +197,7 @@ To train `Seg-B-Mask/16`, simply set `vit_base_patch16_384` as backbone and laun
 
 To plot the logs of your experiments, you can use
 ```python
-python -m segm.utils.logs logs.yml
+python -m utils.logs logs.yml
 ```
 
 with `logs.yml` located in `utils/` with the path to your experiments logs:
@@ -213,7 +213,7 @@ logs:
 To visualize the attention maps for `Seg-T-Mask/16` encoder layer 0 and patch `(0, 21)`, you can use:
 
 ```python
-python -m segm.scripts.show_attn_map seg_tiny_mask/checkpoint.pth \ 
+python -m scripts.show_attn_map seg_tiny_mask/checkpoint.pth \ 
 images/im0.jpg output_dir/ --layer-id 0 --x-patch 0 --y-patch 21 --enc
 ```
 
@@ -226,7 +226,7 @@ Different options are provided to select the generated attention maps:
 For example, to generate attention maps for the decoder class embeddings, you can use:
 
 ```python
-python -m segm.scripts.show_attn_map seg_tiny_mask/checkpoint.pth \
+python -m scripts.show_attn_map seg_tiny_mask/checkpoint.pth \
 images/im0.jpg output_dir/ --layer-id 0 --dec --cls
 ```
 

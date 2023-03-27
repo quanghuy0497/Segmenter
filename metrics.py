@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import torch.distributed as dist
-import segm.utils.torch as ptu
+import utils.torch as ptu
 
 import os
 import pickle as pkl
@@ -41,7 +41,8 @@ Segmentation mean IoU
 based on collect_results_cpu
 https://github.com/open-mmlab/mmsegmentation/blob/master/mmseg/apis/test.py#L160-L200
 """
-
+rootdir = os.getcwd()
+os.environ["DATASET"] = "data"
 
 def gather_data(seg_pred, tmp_dir=None):
     """
@@ -50,7 +51,7 @@ def gather_data(seg_pred, tmp_dir=None):
     and loaded on the master node to compute metrics
     """
     if tmp_dir is None:
-        tmpprefix = os.path.expandvars("$DATASET/temp")
+        tmpprefix = os.path.expandvars(os.path.join(rootdir, "$DATASET/temp/"))
     else:
         tmpprefix = os.path.expandvars(tmp_dir)
     MAX_LEN = 512

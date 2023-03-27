@@ -7,8 +7,8 @@ from torchvision import datasets
 from torchvision import transforms
 from PIL import Image
 
-from segm.data import utils
-from segm.config import dataset_dir
+from data import utils
+from config import dataset_dir
 
 
 class ImagenetDataset(Dataset):

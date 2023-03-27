@@ -1,11 +1,11 @@
 import torch
 import math
 
-from segm.utils.logger import MetricLogger
-from segm.metrics import gather_data, compute_metrics
-from segm.model import utils
-from segm.data.utils import IGNORE_LABEL
-import segm.utils.torch as ptu
+from utils.logger import MetricLogger
+from metrics import gather_data, compute_metrics
+from model import utils
+from data.utils import IGNORE_LABEL
+import utils.torch as ptu
 
 
 def train_one_epoch(

@@ -1,10 +1,10 @@
-import segm.utils.torch as ptu
+import utils.torch as ptu
 
-from segm.data import ImagenetDataset
-from segm.data import ADE20KSegmentation
-from segm.data import PascalContextDataset
-from segm.data import CityscapesDataset
-from segm.data import Loader
+from data import ImagenetDataset
+from data import ADE20KSegmentation
+from data import PascalContextDataset
+from data import CityscapesDataset
+from data import Loader
 
 
 def create_dataset(dataset_kwargs):

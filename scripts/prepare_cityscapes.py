@@ -6,7 +6,7 @@ import mmcv
 import zipfile
 
 from pathlib import Path
-from segm.utils.download import download
+from utils.download import download
 
 USERNAME = None
 PASSWORD = None
@@ -21,17 +21,17 @@ def download_cityscapes(path, username, password, overwrite=False):
     download_dir.mkdir(parents=True, exist_ok=True)
 
     os.system(
-        f"wget --keep-session-cookies --save-cookies=cookies.txt --post-data 'username={username}&password={password}&submit=Login' https://www.cityscapes-dataset.com/login/ -P {download_dir}"
+        f"wget --keep-session-cookies --save-cookies={download_dir}/cookies.txt --post-data 'username={username}&password={password}&submit=Login' https://www.cityscapes-dataset.com/login/ --delete-after -P {download_dir}"
     )
 
     if not (download_dir / "gtFine_trainvaltest.zip").is_file():
         os.system(
-            f"wget --load-cookies cookies.txt --content-disposition https://www.cityscapes-dataset.com/file-handling/?packageID=1 -P {download_dir}"
+            f"wget --load-cookies {download_dir}/cookies.txt --content-disposition https://www.cityscapes-dataset.com/file-handling/?packageID=1 -P {download_dir}"
         )
 
     if not (download_dir / "leftImg8bit_trainvaltest.zip").is_file():
         os.system(
-            f"wget --load-cookies cookies.txt --content-disposition https://www.cityscapes-dataset.com/file-handling/?packageID=3 -P {download_dir}"
+            f"wget --load-cookies {download_dir}/cookies.txt --content-disposition https://www.cityscapes-dataset.com/file-handling/?packageID=3 -P {download_dir}"
         )
 
     for filename, checksum in _CITY_DOWNLOAD_URLS:
@@ -60,10 +60,12 @@ def convert_json_to_label(json_file):
 
 
 @click.command(help="Initialize Cityscapes dataset.")
-@click.argument("download_dir", type=str)
-@click.option("--username", default=USERNAME, type=str)
-@click.option("--password", default=PASSWORD, type=str)
+@click.argument("download_dir", default = 'data/', type=str)
+@click.option("--username", default='quanghuy0497', type=str)
+@click.option("--password", default='Ht_*0605', type=str)
 @click.option("--nproc", default=10, type=int)
+
+
 def main(
     download_dir,
     username,
@@ -75,12 +77,12 @@ def main(
 
     if username is None or password is None:
         raise ValueError(
-            "You must indicate your username and password either in the script variables or by passing options --username and --pasword."
+            "You must indicate your username and password either in the script variables or by passing options --username and --password."
         )
 
-    download_cityscapes(dataset_dir, username, password, overwrite=False)
+    download_cityscapes(dataset_dir, username, password, overwrite=True)
 
-    install_cityscapes_api()
+    # install_cityscapes_api()
 
     gt_dir = dataset_dir / "gtFine"
 
