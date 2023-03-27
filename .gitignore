@@ -4,3 +4,4 @@ data/ade20k
 data/cityscapes
 logs/
 data/temp
+wandb/

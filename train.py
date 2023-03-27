@@ -7,6 +7,7 @@ import datetime
 import torch
 import click
 import argparse
+import wandb as WandB
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from utils import distributed
@@ -45,6 +46,7 @@ from engine import train_one_epoch, evaluate
 @click.option("--eval-freq", default=None, type=int)
 @click.option("--amp/--no-amp", default=False, is_flag=True)
 @click.option("--resume/--no-resume", default=True, is_flag=True)
+@click.option("--wandb", default=False, is_flag=True)
 def main(
     dataset,
     im_size,
@@ -65,6 +67,7 @@ def main(
     eval_freq,
     amp,
     resume,
+    wandb,
 ):
     # start distributed mode
     ptu.set_gpu_mode(True)
@@ -112,7 +115,8 @@ def main(
     if normalization:
         model_cfg["normalization"] = normalization
 
-    log_dir = 'logs/' + "{:%Y%m%d@%H%M%S}".format(datetime.datetime.now())
+    date_id = "{:%Y%m%d@%H%M%S}".format(datetime.datetime.now())
+    log_dir = 'logs/' + dataset + '_' + date_id
     # experiment config
     batch_size = world_batch_size // ptu.world_size
     variant = dict(
@@ -217,8 +221,11 @@ def main(
     variant["net_kwargs"] = net_kwargs
     variant["dataset_kwargs"] = dataset_kwargs
     log_dir.mkdir(parents=True, exist_ok=True)
-    with open(log_dir / "variant.yml", "w") as f:
+    with open(log_dir / "config.yml", "w") as f:
         f.write(variant_str)
+    if wandb:
+        wandb_name = date_id + "-" + dataset + "-" + backbone + "-" + decoder
+        WandB.init(project = "Segmenter", name = wandb_name, config=variant, id = date_id)
 
     # train
     start_epoch = variant["algorithm_kwargs"]["start_epoch"]
@@ -231,10 +238,10 @@ def main(
 
     val_seg_gt = val_loader.dataset.get_gt_seg_maps()
 
-    print(f"Train dataset length: {len(train_loader.dataset)}")
+    print(f"\nTrain dataset length: {len(train_loader.dataset)}")
     print(f"Val dataset length: {len(val_loader.dataset)}")
     print(f"Encoder parameters: {num_params(model_without_ddp.encoder)}")
-    print(f"Decoder parameters: {num_params(model_without_ddp.decoder)}")
+    print(f"Decoder parameters: {num_params(model_without_ddp.decoder)} \n")
 
     for epoch in range(start_epoch, num_epochs):
         # train for one epoch
@@ -246,6 +253,8 @@ def main(
             epoch,
             amp_autocast,
             loss_scaler,
+            num_epochs,
+            wandb,
         )
 
         # save checkpoint
@@ -271,19 +280,20 @@ def main(
                 window_size,
                 window_stride,
                 amp_autocast,
+                epoch,
+                wandb,
             )
-            print(f"Stats [{epoch}]:", eval_logger, flush=True)
-            print("")
+            print(f"Stats [{epoch}]: {eval_logger} \n", flush=True)
 
         # log stats
         if ptu.dist_rank == 0:
             train_stats = {
-                k: meter.global_avg for k, meter in train_logger.meters.items()
+                k: meter for k, meter in train_logger.items()
             }
             val_stats = {}
             if eval_epoch:
                 val_stats = {
-                    k: meter.global_avg for k, meter in eval_logger.meters.items()
+                    k: meter for k, meter in eval_logger.items()
                 }
 
             log_stats = {
@@ -295,6 +305,9 @@ def main(
 
             with open(log_dir / "log.txt", "a") as f:
                 f.write(json.dumps(log_stats) + "\n")
+    if wandb:
+        WandB.save(os.path.join(log_dir, "log.txt"))
+        WandB.finish()
 
     distributed.barrier()
     distributed.destroy_process()
