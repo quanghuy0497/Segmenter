@@ -36,6 +36,7 @@ class ADE20KSegmentation(BaseMMSeg):
         elif self.split == "test":
             config.data.test.data_root = path / "release_test"
         config = super().update_default_config(config)
+        
         return config
 
     def test_post_process(self, labels):

@@ -116,11 +116,12 @@ def evaluate(
                     batch_size=1,
                 )
                 seg_pred = seg_pred.argmax(0)
+
+            seg_pred = seg_pred.cpu().numpy()
+            val_seg_pred[filename] = seg_pred
+            
             val_pbar.set_description('Evalidation   ')
             val_pbar.update(1)
-
-        seg_pred = seg_pred.cpu().numpy()
-        val_seg_pred[filename] = seg_pred
 
     val_seg_pred = gather_data(val_seg_pred)
     scores = compute_metrics(
@@ -130,8 +131,9 @@ def evaluate(
         ignore_index=IGNORE_LABEL,
         distributed=ptu.distributed,
     )
+    
     if wandb:
-        WandB.log({"Val/Pixel Acc": scores["pixel_accuracy"].item() * 100, "Val/Mean Acc": scores["mean_accuracy"].item() * 100, "Val/Mean IoU": scores["mean_iou"].item() * 100}, step = epoch + 1)
+        WandB.log({"Val/Pixel Acc": scores["pixel_accuracy"].item() , "Val/Mean Acc": scores["mean_accuracy"].item(), "Val/Mean IoU": scores["mean_iou"].item()}, step = epoch + 1)
 
     for k, v in scores.items():
         logger.update(**{f"{k}": v.item()})
