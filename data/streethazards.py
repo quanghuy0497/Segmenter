@@ -30,4 +30,4 @@ class StreetHazardsDataset(BaseMMSeg):
         return config
 
     def test_post_process(self, labels):
-        return labels + 1
+        return labels
