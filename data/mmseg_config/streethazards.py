@@ -13,9 +13,10 @@ from .custom import CustomDataset
 @DATASETS.register_module()
 class StreetHazardsDataset(CustomDataset):
   
-    CLASSES = ('buidling', 'fence', 'other', 'pedestrian', 'pole', 'road line', 'road', 'sidewalk', 'vegetation', 'car', 'wall', 'traffic sign')
+    CLASSES = ('unlabeled', 'buidling', 'fence', 'other', 'pedestrian', 'pole', 'road line', 'road', 'sidewalk', 'vegetation', 'car', 'wall', 'traffic sign')
 
-    PALETTE =  [[ 70,  70,  70],        # building
+    PALETTE =  [[  0,   0,   0],        # unlabeled
+                [ 70,  70,  70],        # building
                 [190, 153, 153],        # fence
                 [250, 170, 160],        # other
                 [220,  20,  60],        # pedestrian

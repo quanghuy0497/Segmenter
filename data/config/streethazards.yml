@@ -1,4 +1,11 @@
 - color:
+  - 0
+  - 0
+  - 0
+  id: 0
+  isthing: 0
+  name: unlabeled
+- color:
   - 70
   - 70
   - 70
