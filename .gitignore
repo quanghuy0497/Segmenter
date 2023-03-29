@@ -7,3 +7,5 @@ data/streethazards
 logs/
 data/temp
 wandb/
+
+command.md

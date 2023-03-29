@@ -132,8 +132,8 @@ dataset:
     window_stride: 512
   streethazards:
     epochs: 50
-    eval_freq: 2
-    batch_size: 8
+    eval_freq: 1
+    batch_size: 4
     learning_rate: 0.001
     im_size: 1024
     crop_size: 640

@@ -8,6 +8,7 @@ import torch
 import click
 import argparse
 import wandb as WandB
+import random
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from utils import distributed
@@ -25,6 +26,14 @@ from contextlib import suppress
 from utils.distributed import sync_model
 from engine import train_one_epoch, evaluate
 
+def seed_func(seed_value):
+    torch.manual_seed(seed_value)
+    torch.cuda.manual_seed(seed_value)
+    np.random.seed(seed_value)
+    random.seed(seed_value)
+    torch.manual_seed(seed_value)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True   
 
 @click.command(help="")
 @click.option("--dataset", type=str)
@@ -40,6 +49,7 @@ from engine import train_one_epoch, evaluate
 @click.option("--dropout", default=0.0, type=float)
 @click.option("--drop-path", default=0.1, type=float)
 @click.option("--batch-size", default=None, type=int)
+@click.option("--seed", default=4040, type=int)
 @click.option("--epochs", default=None, type=int)
 @click.option("-lr", "--learning-rate", default=None, type=float)
 @click.option("--normalization", default=None, type=str)
@@ -47,6 +57,7 @@ from engine import train_one_epoch, evaluate
 @click.option("--amp/--no-amp", default=False, is_flag=True)
 @click.option("--resume/--no-resume", default=True, is_flag=True)
 @click.option("--wandb", default=False, is_flag=True)
+    
 def main(
     dataset,
     im_size,
@@ -68,8 +79,11 @@ def main(
     amp,
     resume,
     wandb,
+    seed,
 ):
     # start distributed mode
+    seed_func(seed)
+    
     ptu.set_gpu_mode(True)
     distributed.init_process()
 
@@ -164,6 +178,7 @@ def main(
     log_dir = Path(log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_path = log_dir / "checkpoint.pth"
+    best_path = log_dir / "best.pth"
 
     # dataset
     dataset_kwargs = variant["dataset_kwargs"]
@@ -243,6 +258,7 @@ def main(
     print(f"Encoder parameters: {num_params(model_without_ddp.encoder)}")
     print(f"Decoder parameters: {num_params(model_without_ddp.decoder)} \n")
 
+    best = 0 
     for epoch in range(start_epoch, num_epochs):
         # train for one epoch
         train_logger = train_one_epoch(
@@ -283,7 +299,13 @@ def main(
                 epoch,
                 wandb,
             )
-            print(f"Stats [{epoch}]: {eval_logger} \n", flush=True)
+            print(f"Stats [{epoch + 1}]: {eval_logger}", flush=True)
+            if eval_logger['pixel_accuracy'] > best:
+                print("Save best file \n")
+                best = eval_logger['pixel_accuracy']
+                torch.save(snapshot, best_path)
+            else:
+                print("\n")
 
         # log stats
         if ptu.dist_rank == 0:
@@ -306,7 +328,10 @@ def main(
             with open(log_dir / "log.txt", "a") as f:
                 f.write(json.dumps(log_stats) + "\n")
     if wandb:
-        WandB.save(os.path.join(log_dir, "log.txt"))
+        log = log_dir / "log.txt"
+        WandB.save(str(log_dir))
+        WandB.save(str(checkpoint_path))
+        WandB.save(str(best_path))
         WandB.finish()
 
     distributed.barrier()

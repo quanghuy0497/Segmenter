@@ -2,28 +2,10 @@
 
 
 [Segmenter: Transformer for Semantic Segmentation](https://arxiv.org/abs/2105.05633)
-by Robin Strudel*, Ricardo Garcia*, Ivan Laptev and Cordelia Schmid, ICCV 2021.
 
-*Equal Contribution
-
-🔥 **Segmenter is now available on [MMSegmentation](https://github.com/open-mmlab/mmsegmentation/tree/master/configs/segmenter).**
-
-## Installation
-
-Define os environment variables pointing to your checkpoint and dataset directory, put in your `.bashrc`:
-```sh
-export DATASET=/path/to/dataset/dir
-```
-
-Install [PyTorch 1.9](https://pytorch.org/) then `pip install .` at the root of this repository.
-
-To download ADE20K, use the following command:
-```python
-python -m scripts.prepare_ade20k $DATASET
-```
 
 ## Model Zoo
-We release models with a Vision Transformer backbone initialized from the [improved ViT](https://arxiv.org/abs/2106.10270) models.
+Release models with a Vision Transformer backbone initialized from the [improved ViT](https://arxiv.org/abs/2106.10270) models.
 
 ### ADE20K
 
@@ -168,67 +150,29 @@ Segmenter models with DeiT backbone:
 
 ## Inference
 
-Download one checkpoint with its configuration in a common folder, for example `seg_tiny_mask`.
-
-You can generate segmentation maps from your own data with:
-```python
-python -m inference --model-path seg_tiny_mask/checkpoint.pth -i images/ -o segmaps/ 
-```
-
-To evaluate on ADE20K, run the command:
-```python
-# single-scale evaluation:
-python -m eval.miou seg_tiny_mask/checkpoint.pth ade20k --singlescale
-# multi-scale evaluation:
-python -m eval.miou seg_tiny_mask/checkpoint.pth ade20k --multiscale
-```
-
-## Train
+## Train and test
 
 Train `Seg-T-Mask/16` on ADE20K on a single GPU:
 ```python
-python -m train --log-dir seg_tiny_mask --dataset ade20k \
-  --backbone vit_tiny_patch16_384 --decoder mask_transformer
+python train.py --dataset ade20k --backbone vit_tiny_patch16_384 --decoder mask_transformer --wandb
+
+python train.py --dataset streethazards --backbone vit_tiny_patch16_384 --decoder mask_transformer --wandb
 ```
 
-To train `Seg-B-Mask/16`, simply set `vit_base_patch16_384` as backbone and launch the above command using a minimum of 4 V100 GPUs (~12 minutes per epoch) and up to 8 V100 GPUs (~7 minutes per epoch). The code uses [SLURM](https://slurm.schedmd.com/documentation.html) environment variables.
+Test `Seg-T-Mask/16` on StreetHazards on a single GPU:
+```python
+python test.py --dataset ade20k --model_path <log_folder> --singlescale --save-image
+
+python test.py --dataset streethazards --model_path <log_folder> --singlescale --save-image
+
+# --save-image is optional; --model_path only require the leaf folder name on logs dir. Example:
+python.test.py --dataset streethazards --model_path streethazards_20030329@190011 --singlescale --save-images
+```
+
 
 ## Logs
+Simply install WandB `pip install wandb`, login into your WandB account, and turn the flag: `--wandb` in `train.py`
 
-To plot the logs of your experiments, you can use
-```python
-python -m utils.logs logs.yml
-```
-
-with `logs.yml` located in `utils/` with the path to your experiments logs:
-```yaml
-root: /path/to/checkpoints/
-logs:
-  seg-t: seg_tiny_mask/log.txt
-  seg-b: seg_base_mask/log.txt
-```
-
-## Attention Maps
-
-To visualize the attention maps for `Seg-T-Mask/16` encoder layer 0 and patch `(0, 21)`, you can use:
-
-```python
-python -m scripts.show_attn_map seg_tiny_mask/checkpoint.pth \ 
-images/im0.jpg output_dir/ --layer-id 0 --x-patch 0 --y-patch 21 --enc
-```
-
-Different options are provided to select the generated attention maps:
-* `--enc` or `--dec`: Select encoder or decoder attention maps respectively.
-* `--patch` or `--cls`: `--patch` generates attention maps for the patch with coordinates `(x_patch, y_patch)`. `--cls` combined with `--enc` generates attention maps for the CLS token of the encoder. `--cls` combined with `--dec` generates maps for each class embedding of the decoder.
-* `--x-patch` and `--y-patch`: Coordinates of the patch to draw attention maps from. This flag is ignored when `--cls` is used.
-* `--layer-id`: Select the layer for which the attention maps are generated.
-
-For example, to generate attention maps for the decoder class embeddings, you can use:
-
-```python
-python -m scripts.show_attn_map seg_tiny_mask/checkpoint.pth \
-images/im0.jpg output_dir/ --layer-id 0 --dec --cls
-```
 
 ## BibTex
 
@@ -246,3 +190,5 @@ images/im0.jpg output_dir/ --layer-id 0 --dec --cls
 
 The Vision Transformer code is based on [timm](https://github.com/rwightman/pytorch-image-models) library and the semantic segmentation training and evaluation pipeline 
 is using [mmsegmentation](https://github.com/open-mmlab/mmsegmentation).
+
+Code modified by [quanghuy0497](https://github.com/quanghuy0497)

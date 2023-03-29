@@ -15,7 +15,10 @@ def seg_to_rgb(seg, colors):
     im = torch.zeros((seg.shape[0], seg.shape[1], seg.shape[2], 3)).float()
     cls = torch.unique(seg)
     for cl in cls:
-        color = colors[int(cl)]
+        if int(cl) in colors:
+            color = colors[int(cl)]
+        else:
+            color = colors[0]
         if len(color.shape) > 1:
             color = color[0]
         im[seg == cl] = color

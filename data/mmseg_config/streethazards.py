@@ -13,7 +13,7 @@ from .custom import CustomDataset
 @DATASETS.register_module()
 class StreetHazardsDataset(CustomDataset):
   
-    CLASSES = ('unlabeled', 'buidling', 'fence', 'other', 'pedestrian', 'pole', 'road line', 'road', 'sidewalk', 'vegetation', 'car', 'wall', 'traffic sign')
+    CLASSES = ('unlabeled', 'buidling', 'fence', 'other', 'pedestrian', 'pole', 'road line', 'road', 'sidewalk', 'vegetation', 'car', 'wall', 'traffic sign', 'anomaly')
 
     PALETTE =  [[  0,   0,   0],        # unlabeled
                 [ 70,  70,  70],        # building
@@ -28,7 +28,7 @@ class StreetHazardsDataset(CustomDataset):
                 [  0,   0, 142],        # car
                 [102, 102, 156],        # wall
                 [220, 220,   0],        # traffic sign
-                [ 60, 250, 240]]
+                [ 60, 250, 240]]        # anomaly (test only)
 
     def __init__(self, **kwargs):
         super(StreetHazardsDataset, self).__init__(
@@ -63,10 +63,6 @@ class StreetHazardsDataset(CustomDataset):
 
             png_filename = osp.join(imgfile_prefix, f'{basename}.png')
 
-            # The  index range of official requirement is from 0 to 150.
-            # But the index range of output is from 0 to 149.
-            # That is because we set reduce_zero_label=True.
-            result = result
 
             output = Image.fromarray(result.astype(np.uint8))
             output.save(png_filename)

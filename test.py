@@ -4,14 +4,15 @@ from pathlib import Path
 import yaml
 import numpy as np
 from PIL import Image
+import matplotlib.pyplot as plt
 import shutil
+import tqdm
 
 import torch
 import torch.nn.functional as F
 from torch.nn.parallel import DistributedDataParallel as DDP
 
 from utils import distributed
-from utils.logger import MetricLogger
 import utils.torch as ptu
 
 from model.factory import load_model
@@ -20,7 +21,7 @@ from metrics import gather_data, compute_metrics
 
 from model.utils import inference
 from data.utils import seg_to_rgb, rgb_denormalize, IGNORE_LABEL
-from segm import config
+import config
 
 
 def blend_im(im, seg, alpha=0.5):
@@ -44,20 +45,32 @@ def save_im(save_dir, save_name, im, seg_pred, seg_gt, colors, blend, normalizat
         if blend:
             blend_pred = blend_im(im_uint[i], seg_pred_uint[i])
             blend_gt = blend_im(im_uint[i], seg_rgb_uint[i])
-            ims = (im_uint[i], blend_pred, blend_gt)
+            true_img, pred_img, gt_img = im_uint[i], blend_pred, blend_gt
         else:
-            ims = (im_uint[i], seg_pred_uint[i], seg_rgb_uint[i])
-        for im, im_dir in zip(
-            ims, (save_dir / "input", save_dir / "pred", save_dir / "gt"),
-        ):
-            pil_out = Image.fromarray(im)
-            im_dir.mkdir(exist_ok=True)
-            pil_out.save(im_dir / save_name)
+            true_img, pred_img, gt_img = im_uint[i], seg_pred_uint[i], seg_rgb_uint[i]
+        
+        # for im, im_dir in zip(ims, (save_dir / "input", save_dir / "pred", save_dir / "gt")):
+        #     pil_out = Image.fromarray(im)
+        #     im_dir.mkdir(exist_ok=True)
+        #     pil_out.save(im_dir / save_name)
+        im_dir = save_dir / "result"
+        im_dir.mkdir(exist_ok=True)
+        
+        plt.figure(figsize = (80, 18))
+        
+        plt.subplot(131), plt.imshow(gt_img)
+        plt.title('Ground Truth', fontsize = 60, pad = 30), plt.xticks([]), plt.yticks([])
+        plt.subplot(132), plt.imshow(true_img)
+        plt.title('Original Image', fontsize = 60, pad = 30), plt.xticks([]), plt.yticks([])
+        plt.subplot(133), plt.imshow(pred_img)
+        plt.title('Prediction', fontsize = 60, pad = 30), plt.xticks([]), plt.yticks([])
+        plt.tight_layout()
+
+        plt.savefig(str(im_dir) + "/" + save_name)
+        plt.close()
 
 
-def process_batch(
-    model, batch, window_size, window_stride, window_batch_size,
-):
+def process_batch(model, batch, window_size, window_stride, window_batch_size):
     ims = batch["im"]
     ims_metas = batch["im_metas"]
     ori_shape = ims_metas[0]["ori_shape"]
@@ -92,8 +105,8 @@ def eval_dataset(
     window_batch_size,
     save_images,
     frac_dataset,
-    dataset_kwargs,
-):
+    dataset_kwargs):
+    
     db = create_dataset(dataset_kwargs)
     normalization = db.dataset.normalization
     dataset_name = dataset_kwargs["dataset"]
@@ -103,25 +116,48 @@ def eval_dataset(
     if multiscale:
         db.dataset.set_multiscale_mode()
 
-    logger = MetricLogger(delimiter="  ")
-    header = ""
-    print_freq = 50
-
     ims = {}
     seg_pred_maps = {}
     idx = 0
-    for batch in logger.log_every(db, print_freq, header):
-        colors = batch["colors"]
-        filename, im, seg_pred = process_batch(
-            model, batch, window_size, window_stride, window_batch_size,
-        )
-        ims[filename] = im
-        seg_pred_maps[filename] = seg_pred
-        idx += 1
-        if idx > len(db) * frac_dataset:
-            break
+    
+    with tqdm.tqdm(total = len(db)) as test_pbar:
+        for i, batch in enumerate(db): 
+            colors = batch["colors"]
+            filename, im, seg_pred = process_batch(
+                model, batch, window_size, window_stride, window_batch_size,
+            )
+            ims[filename] = im
+            seg_pred_maps[filename] = seg_pred
+            idx += 1
+            if idx > len(db) * frac_dataset:
+                break
+            test_pbar.set_description('Evaluation   ')
+            test_pbar.update(1)
 
     seg_gt_maps = db.dataset.get_gt_seg_maps()
+    
+    scores = compute_metrics(
+        seg_pred_maps,
+        seg_gt_maps,
+        n_cls,
+        ignore_index=IGNORE_LABEL,
+        ret_cat_iou=True,
+        distributed=ptu.distributed,
+    )
+
+    if ptu.dist_rank == 0:
+        scores["inference"] = "single_scale" if not multiscale else "multi_scale"
+        suffix = "ss" if not multiscale else "ms"
+        scores["cat_iou"] = np.round(100 * scores["cat_iou"], 2).tolist()
+        for k, v in scores.items():
+            if k != "cat_iou" and k != "inference":
+                scores[k] = v.item()
+            if k != "cat_iou":
+                print(f"{k}: {scores[k]}")
+        scores_str = yaml.dump(scores)
+        with open(model_dir / f"scores_{suffix}.yml", "w") as f:
+            f.write(scores_str)
+    
     if save_images:
         save_dir = model_dir / "images"
         if ptu.dist_rank == 0:
@@ -161,43 +197,22 @@ def eval_dataset(
         torch.distributed.barrier()
         seg_pred_maps = gather_data(seg_pred_maps)
 
-    scores = compute_metrics(
-        seg_pred_maps,
-        seg_gt_maps,
-        n_cls,
-        ignore_index=IGNORE_LABEL,
-        ret_cat_iou=True,
-        distributed=ptu.distributed,
-    )
-
-    if ptu.dist_rank == 0:
-        scores["inference"] = "single_scale" if not multiscale else "multi_scale"
-        suffix = "ss" if not multiscale else "ms"
-        scores["cat_iou"] = np.round(100 * scores["cat_iou"], 2).tolist()
-        for k, v in scores.items():
-            if k != "cat_iou" and k != "inference":
-                scores[k] = v.item()
-            if k != "cat_iou":
-                print(f"{k}: {scores[k]}")
-        scores_str = yaml.dump(scores)
-        with open(model_dir / f"scores_{suffix}.yml", "w") as f:
-            f.write(scores_str)
-
 
 @click.command()
-@click.argument("model_path", type=str)
-@click.argument("dataset_name", type=str)
+@click.option("--model_path", type=str)
+@click.option("--dataset", type=str)
 @click.option("--im-size", default=None, type=int)
 @click.option("--multiscale/--singlescale", default=False, is_flag=True)
 @click.option("--blend/--no-blend", default=True, is_flag=True)
 @click.option("--window-size", default=None, type=int)
 @click.option("--window-stride", default=None, type=int)
 @click.option("--window-batch-size", default=4, type=int)
-@click.option("--save-images/--no-save-images", default=False, is_flag=True)
-@click.option("-frac-dataset", "--frac-dataset", default=1.0, type=float)
+@click.option("--save-images", default=False, is_flag=True)
+@click.option("--frac-dataset", default=1.0, type=float)
+
 def main(
     model_path,
-    dataset_name,
+    dataset,
     im_size,
     multiscale,
     blend,
@@ -205,10 +220,10 @@ def main(
     window_stride,
     window_batch_size,
     save_images,
-    frac_dataset,
-):
-
-    model_dir = Path(model_path).parent
+    frac_dataset):
+    
+    model_path = "logs/" + model_path
+    model_dir = Path(model_path)
 
     # start distributed mode
     ptu.set_gpu_mode(True)
@@ -222,7 +237,7 @@ def main(
         model = DDP(model, device_ids=[ptu.device], find_unused_parameters=True)
 
     cfg = config.load_config()
-    dataset_cfg = cfg["dataset"][dataset_name]
+    dataset_cfg = cfg["dataset"][dataset]
     normalization = variant["dataset_kwargs"]["normalization"]
     if im_size is None:
         im_size = dataset_cfg.get("im_size", variant["dataset_kwargs"]["image_size"])
@@ -232,17 +247,16 @@ def main(
         window_stride = variant["dataset_kwargs"]["crop_size"] - 32
 
     dataset_kwargs = dict(
-        dataset=dataset_name,
+        dataset=dataset,
         image_size=im_size,
         crop_size=im_size,
         patch_size=patch_size,
         batch_size=1,
         num_workers=8,
-        split="val",
+        split="test",
         normalization=normalization,
         crop=False,
-        rep_aug=False,
-    )
+        rep_aug=False)
 
     eval_dataset(
         model,
@@ -254,8 +268,7 @@ def main(
         window_batch_size,
         save_images,
         frac_dataset,
-        dataset_kwargs,
-    )
+        dataset_kwargs)
 
     distributed.barrier()
     distributed.destroy_process()

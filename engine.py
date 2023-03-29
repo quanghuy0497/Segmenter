@@ -120,7 +120,7 @@ def evaluate(
             seg_pred = seg_pred.cpu().numpy()
             val_seg_pred[filename] = seg_pred
             
-            val_pbar.set_description('Evalidation   ')
+            val_pbar.set_description('Evaluation   ')
             val_pbar.update(1)
 
     val_seg_pred = gather_data(val_seg_pred)

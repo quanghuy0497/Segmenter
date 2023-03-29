@@ -111,12 +111,13 @@ def create_segmenter(model_cfg):
 
 
 def load_model(model_path):
-    variant_path = Path(model_path).parent / "variant.yml"
+    variant_path = Path(model_path) / "config.yml"
     with open(variant_path, "r") as f:
         variant = yaml.load(f, Loader=yaml.FullLoader)
     net_kwargs = variant["net_kwargs"]
 
     model = create_segmenter(net_kwargs)
+    model_path = model_path + "/best.pth"
     data = torch.load(model_path, map_location=ptu.device)
     checkpoint = data["model"]
 

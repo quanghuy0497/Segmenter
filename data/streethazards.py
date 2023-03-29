@@ -14,7 +14,7 @@ class StreetHazardsDataset(BaseMMSeg):
         super().__init__(image_size, crop_size, split, STREETHAZARDS_CONFIG_PATH, **kwargs)
         self.names, self.colors = utils.dataset_cat_description(STREETHAZARDS_CATS_PATH)
         self.n_cls = 14
-        self.ignore_label = 0
+        self.ignore_label = 13  
         self.reduce_zero_label = False
 
     def update_default_config(self, config):
