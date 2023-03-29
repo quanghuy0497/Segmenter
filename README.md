@@ -169,7 +169,14 @@ python test.py --dataset streethazards --model_path <log_folder> --singlescale -
 python.test.py --dataset streethazards --model_path streethazards_20030329@190011 --singlescale --save-images
 ```
 
+Or you can just conduct all training/testing phases under 1 command script:
 
+```python
+
+python main.py --dataset streethazards --backbone vit_tiny_patch16_384 --decoder mask_transformer --singlescale --save-images --wandb
+```
+
+`train.py` or `main.py` automatically generate log folder on `logs/` based on executed time to store checkpoint model, best weight model, training/testing params logs, test performance, and test image prediction with the format: `<dataset_date@time>`
 ## Logs
 Simply install WandB `pip install wandb`, login into your WandB account, and turn the flag: `--wandb` in `train.py`
 

@@ -1,30 +1,31 @@
-import sys
-from pathlib import Path
-import yaml
-import json
-import numpy as np
-import datetime
-import torch
-import click
 import argparse
-import wandb as WandB
+import datetime
+import json
 import random
+import sys
+from contextlib import suppress
+from pathlib import Path
+
+import click
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torch.nn.functional as F
+import yaml
+from timm.utils import NativeScaler
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from utils import distributed
-import utils.torch as ptu
 import config
-
-from model.factory import create_segmenter
-from optim.factory import create_optimizer, create_scheduler
+import utils.torch as ptu
+import wandb as WandB
 from data.factory import create_dataset
+from engine import eval_dataset, evaluate, train_one_epoch
+from model.factory import create_segmenter, load_model
 from model.utils import num_params
-
-from timm.utils import NativeScaler
-from contextlib import suppress
-
+from optim.factory import create_optimizer, create_scheduler
+from utils import distributed
 from utils.distributed import sync_model
-from engine import train_one_epoch, evaluate
+
 
 def seed_func(seed_value):
     torch.manual_seed(seed_value)
@@ -39,6 +40,7 @@ def seed_func(seed_value):
 @click.option("--amp/--no-amp", default=False, is_flag=True)
 @click.option("--backbone", default="", type=str)
 @click.option("--batch-size", default=None, type=int)
+@click.option("--blend/--no-blend", default=True, is_flag=True)
 @click.option("--crop-size", default=None, type=int)
 @click.option("--dataset", type=str)
 @click.option("--decoder", default="", type=str)
@@ -46,18 +48,22 @@ def seed_func(seed_value):
 @click.option("--dropout", default=0.0, type=float)
 @click.option("--epochs", default=None, type=int)
 @click.option("--eval-freq", default=None, type=int)
+@click.option("--frac-dataset", default=1.0, type=float)
 @click.option("--im-size", default=None, type=int, help="dataset resize size")
-@click.option("--learning-rate", default=None, type=float)
+@click.option("--multiscale/--singlescale", default=False, is_flag=True)
 @click.option("--normalization", default=None, type=str)
 @click.option("--optimizer", default="sgd", type=str)
 @click.option("--resume/--no-resume", default=True, is_flag=True)
+@click.option("--save-images", default=False, is_flag=True)
 @click.option("--scheduler", default="polynomial", type=str)
 @click.option("--seed", default=4040, type=int)
 @click.option("--wandb", default=False, is_flag=True)
 @click.option("--weight-decay", default=0.0, type=float)
+@click.option("--window-batch-size", default=4, type=int)
 @click.option("--window-size", default=None, type=int)
 @click.option("--window-stride", default=None, type=int)
-    
+@click.option("--learning-rate", default=None, type=float)
+
 def main(
     dataset,
     im_size,
@@ -80,7 +86,12 @@ def main(
     resume,
     wandb,
     seed,
-):
+    multiscale,
+    blend,
+    save_images,
+    frac_dataset,
+    window_batch_size):
+    
     # start distributed mode
     seed_func(seed)
     
@@ -189,6 +200,13 @@ def main(
     val_kwargs["batch_size"] = 1
     val_kwargs["crop"] = False
     val_loader = create_dataset(val_kwargs)
+    
+    test_kwargs = dataset_kwargs.copy()
+    test_kwargs["split"] = "test"
+    test_kwargs["batch_size"] = 1
+    test_kwargs["crop"] = False
+    test_kwargs["crop_size"] -= 32
+    
     n_cls = train_loader.unwrapped.n_cls
 
     # model
@@ -260,7 +278,8 @@ def main(
 
     best = 0 
     for epoch in range(start_epoch, num_epochs):
-        # train for one epoch
+        
+        ##### Training #####  
         train_logger = train_one_epoch(
             model,
             train_loader,
@@ -286,7 +305,7 @@ def main(
             snapshot["epoch"] = epoch
             torch.save(snapshot, checkpoint_path)
 
-        # evaluate
+        ##### Evaluate #####  
         eval_epoch = epoch % eval_freq == 0 or epoch == num_epochs - 1
         if eval_epoch:
             eval_logger = evaluate(
@@ -327,6 +346,22 @@ def main(
 
             with open(log_dir / "log.txt", "a") as f:
                 f.write(json.dumps(log_stats) + "\n")
+        
+    ##### Testing #####  
+    
+    eval_dataset(
+        model,
+        multiscale,
+        log_dir,
+        blend,
+        window_size,
+        window_stride,
+        window_batch_size,
+        save_images,
+        frac_dataset,
+        test_kwargs,
+        wandb)
+                
     if wandb:
         WandB.save(str(log_dir) + "/log.txt")
         WandB.save(str(log_dir) + "/config.yml")
