@@ -148,8 +148,6 @@ Segmenter models with DeiT backbone:
   </tr>
 </table>
 
-## Inference
-
 ## Train and test
 
 Train `Seg-T-Mask/16` on ADE20K on a single GPU:
@@ -165,7 +163,9 @@ python test.py --dataset ade20k --model_path <log_folder> --singlescale --save-i
 
 python test.py --dataset streethazards --model_path <log_folder> --singlescale --save-image
 
-# --save-image is optional; --model_path only require the leaf folder name on logs dir. Example:
+### --save-image is optional if you want to visualize test image, groundtruth, and prediction 
+### --model_path only require the leaf folder name on logs dir.
+### Example:
 python.test.py --dataset streethazards --model_path streethazards_20030329@190011 --singlescale --save-images
 ```
 
