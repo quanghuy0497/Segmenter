@@ -27,6 +27,7 @@ from engine import eval_dataset
 @click.option("--window-batch-size", default=4, type=int)
 @click.option("--save-images", default=False, is_flag=True)
 @click.option("--frac-dataset", default=1.0, type=float)
+@click.option("--combine", default=False, is_flag=True)
 
 def main(
     model_path,
@@ -38,6 +39,7 @@ def main(
     window_stride,
     window_batch_size,
     save_images,
+    combine,
     frac_dataset):
     
     model_path = "logs/" + model_path
@@ -86,7 +88,8 @@ def main(
         window_batch_size,
         save_images,
         frac_dataset,
-        dataset_kwargs)
+        dataset_kwargs,
+        combine)
 
     distributed.barrier()
     distributed.destroy_process()

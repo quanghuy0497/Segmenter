@@ -51,7 +51,7 @@ def gather_data(seg_pred, tmp_dir=None):
     and loaded on the master node to compute metrics
     """
     if tmp_dir is None:
-        tmpprefix = os.path.expandvars(os.path.join(rootdir, "$DATASET/temp/"))
+        tmpprefix = os.path.expandvars(os.path.join(rootdir, "$DATASET/temp"))
     else:
         tmpprefix = os.path.expandvars(tmp_dir)
     MAX_LEN = 512

@@ -31,7 +31,7 @@ def blend_im(im, seg, alpha=0.5):
     return np.asarray(im_blend)
 
 
-def save_im(save_dir, save_name, im, seg_pred, seg_gt, colors, blend, normalization):
+def save_im(save_dir, save_name, im, seg_pred, seg_gt, colors, blend, normalization, combine):
     seg_rgb = seg_to_rgb(seg_gt[None], colors)
     pred_rgb = seg_to_rgb(seg_pred[None], colors)
     im_unnorm = rgb_denormalize(im, normalization)
@@ -49,21 +49,30 @@ def save_im(save_dir, save_name, im, seg_pred, seg_gt, colors, blend, normalizat
         else:
             true_img, pred_img, gt_img = im_uint[i], seg_pred_uint[i], seg_rgb_uint[i]
         
-        im_dir = save_dir / "result"
-        im_dir.mkdir(exist_ok=True)
+        if combine:
         
-        plt.figure(figsize = (80, 18))
-        
-        plt.subplot(131), plt.imshow(gt_img)
-        plt.title('Ground Truth', fontsize = 60, pad = 30), plt.xticks([]), plt.yticks([])
-        plt.subplot(132), plt.imshow(true_img)
-        plt.title('Original Image', fontsize = 60, pad = 30), plt.xticks([]), plt.yticks([])
-        plt.subplot(133), plt.imshow(pred_img)
-        plt.title('Prediction', fontsize = 60, pad = 30), plt.xticks([]), plt.yticks([])
-        plt.tight_layout()
+            im_dir = save_dir / "result"
+            im_dir.mkdir(exist_ok=True)
+            
+            plt.figure(figsize = (80, 18))
+            
+            plt.subplot(131), plt.imshow(gt_img)
+            plt.title('Ground Truth', fontsize = 60, pad = 30), plt.xticks([]), plt.yticks([])
+            plt.subplot(132), plt.imshow(true_img)
+            plt.title('Original Image', fontsize = 60, pad = 30), plt.xticks([]), plt.yticks([])
+            plt.subplot(133), plt.imshow(pred_img)
+            plt.title('Prediction', fontsize = 60, pad = 30), plt.xticks([]), plt.yticks([])
+            plt.tight_layout()
 
-        plt.savefig(str(im_dir) + "/" + save_name)
-        plt.close()
+            plt.savefig(str(im_dir) + "/" + save_name)
+            plt.close()
+        else:
+            imgs = (true_img, pred_img, gt_img)
+            for im, im_dir in zip(imgs, (save_dir / "input", save_dir / "pred", save_dir / "gt")):
+                pil_out = Image.fromarray(im)
+                im_dir.mkdir(exist_ok=True)
+                pil_out.save(im_dir / save_name)
+        
 
 
 def process_batch(model, batch, window_size, window_stride, window_batch_size):
@@ -230,7 +239,9 @@ def eval_dataset(
     window_batch_size,
     save_images,
     frac_dataset,
-    dataset_kwargs, wandb = False):
+    dataset_kwargs, 
+    combine,
+    wandb = False):
     
     db = create_dataset(dataset_kwargs)
     normalization = db.dataset.normalization
@@ -317,6 +328,7 @@ def eval_dataset(
                 colors,
                 blend,
                 normalization,
+                combine
             )
         if ptu.dist_rank == 0:
             shutil.make_archive(save_dir, "zip", save_dir)

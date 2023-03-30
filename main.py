@@ -42,6 +42,7 @@ def seed_func(seed_value):
 @click.option("--batch-size", default=None, type=int)
 @click.option("--blend/--no-blend", default=True, is_flag=True)
 @click.option("--crop-size", default=None, type=int)
+@click.option("--combine", default=False, is_flag=True)
 @click.option("--dataset", type=str)
 @click.option("--decoder", default="", type=str)
 @click.option("--drop-path", default=0.1, type=float)
@@ -90,7 +91,8 @@ def main(
     blend,
     save_images,
     frac_dataset,
-    window_batch_size):
+    window_batch_size,
+    combine):
     
     # start distributed mode
     seed_func(seed)
@@ -360,6 +362,7 @@ def main(
         save_images,
         frac_dataset,
         test_kwargs,
+        combine,
         wandb)
                 
     if wandb:
