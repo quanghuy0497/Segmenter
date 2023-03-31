@@ -19,7 +19,7 @@ class CityscapesDataset(BaseMMSeg):
         super().__init__(image_size, crop_size, split, CITYSCAPES_CONFIG_PATH, **kwargs)
         self.names, self.colors = utils.dataset_cat_description(CITYSCAPES_CATS_PATH)
         self.n_cls = 19
-        self.ignore_label = 255
+        self.ignore_label = [255]
         self.reduce_zero_label = False
 
     def update_default_config(self, config):

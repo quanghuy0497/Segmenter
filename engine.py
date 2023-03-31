@@ -330,10 +330,10 @@ def eval_dataset(
                 normalization,
                 combine
             )
-        if ptu.dist_rank == 0:
-            shutil.make_archive(save_dir, "zip", save_dir)
-            # shutil.rmtree(save_dir)
-            print(f"Saved eval images in {save_dir}.zip")
+        # if ptu.dist_rank == 0:
+        #     shutil.make_archive(save_dir, "zip", save_dir)
+        #     # shutil.rmtree(save_dir)
+        #     print(f"Saved eval images in {save_dir}.zip")
 
     if ptu.distributed:
         torch.distributed.barrier()

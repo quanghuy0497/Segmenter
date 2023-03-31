@@ -117,7 +117,7 @@ def load_model(model_path):
     net_kwargs = variant["net_kwargs"]
 
     model = create_segmenter(net_kwargs)
-    model_path = model_path + "/best.pth"
+    model_path = model_path + "/checkpoint.pth"
     data = torch.load(model_path, map_location=ptu.device)
     checkpoint = data["model"]
 

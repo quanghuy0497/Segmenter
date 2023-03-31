@@ -20,7 +20,7 @@ class ADE20KSegmentation(BaseMMSeg):
         )
         self.names, self.colors = utils.dataset_cat_description(ADE20K_CATS_PATH)
         self.n_cls = 150
-        self.ignore_label = 0
+        self.ignore_label = [0]
         self.reduce_zero_label = True
 
     def update_default_config(self, config):

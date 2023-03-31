@@ -17,7 +17,7 @@ class PascalContextDataset(BaseMMSeg):
             PASCAL_CONTEXT_CATS_PATH
         )
         self.n_cls = 60
-        self.ignore_label = 255
+        self.ignore_label = [255]
         self.reduce_zero_label = False
 
     def update_default_config(self, config):

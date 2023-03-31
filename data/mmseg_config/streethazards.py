@@ -13,7 +13,7 @@ from .custom import CustomDataset
 @DATASETS.register_module()
 class StreetHazardsDataset(CustomDataset):
   
-    CLASSES = ('unlabeled', 'buidling', 'fence', 'other', 'pedestrian', 'pole', 'road line', 'road', 'sidewalk', 'vegetation', 'car', 'wall', 'traffic sign', 'anomaly')
+    CLASSES = ('unlabeled', 'building', 'fence', 'other', 'pedestrian', 'pole', 'street line', 'road', 'side walk', 'vegetation', 'vehicle', 'wall', 'trafic sign' , 'anomaly')
 
     PALETTE =  [[  0,   0,   0],        # unlabeled
                 [ 70,  70,  70],        # building
@@ -26,9 +26,8 @@ class StreetHazardsDataset(CustomDataset):
                 [244,  35, 232],        # sidewalk
                 [107, 142,  35],        # vegetation
                 [  0,   0, 142],        # car
-                [102, 102, 156],        # wall
-                [220, 220,   0],        # traffic sign
-                [ 60, 250, 240]]        # anomaly (test only)
+                [102, 102, 156]        # wall
+                [220, 220,   0]]        # anomaly (test only)
 
     def __init__(self, **kwargs):
         super(StreetHazardsDataset, self).__init__(

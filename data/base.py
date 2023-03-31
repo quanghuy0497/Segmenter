@@ -131,13 +131,18 @@ class BaseMMSeg(Dataset):
     def get_gt_seg_maps(self):
         dataset = self.dataset
         gt_seg_maps = {}
+        
         for img_info in dataset.img_infos:
             seg_map = Path(dataset.ann_dir) / img_info["ann"]["seg_map"]
             gt_seg_map = mmcv.imread(seg_map, flag="unchanged", backend="pillow")
-            gt_seg_map[gt_seg_map == self.ignore_label] = IGNORE_LABEL
+
+            for l in self.ignore_label:
+                gt_seg_map[gt_seg_map == l] = IGNORE_LABEL
             if self.reduce_zero_label:
                 gt_seg_map[gt_seg_map != IGNORE_LABEL] -= 1
             gt_seg_maps[img_info["filename"]] = gt_seg_map
+        
+
         return gt_seg_maps
 
     def __len__(self):
